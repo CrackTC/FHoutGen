@@ -10,7 +10,7 @@ namespace FHoutGen.Generate;
 //
 //   fhout-gen [-o out.json] [--model model.onnx] <voice or folder> ...
 //
-// Each voice (wav, mp3 or anything Windows Media Foundation reads; any rate, mono or stereo) becomes one record of
+// Each voice (wav or mp3; any rate, mono or stereo) becomes one record of
 // {"Header", "Body": [{"TextId": <file name without extension>, "List": [{"t", "v"}]}]}, a value per 1/60 s rounded to 3
 // decimals. A folder takes its .wav and .mp3 files in name order. The model is the embedded one unless --model is given.
 // Without -o the JSON goes to standard output.
@@ -89,14 +89,17 @@ static class Program
         return copy.ToArray();
     }
 
-    // The voice as mono float samples at its own rate (channels averaged). An mp3 goes through ACM (Mp3FileReader), which
-    // decodes it sample for sample as ffmpeg does; Media Foundation (AudioFileReader's mp3 path) drops the first 528
-    // samples, a frame of lip data early.
+    // The voice as mono float samples at its own rate (channels averaged): a wav read as it is, an mp3 by NAudio's frame
+    // reader with NLayer's managed decoder, which decodes it as ffmpeg does (Media Foundation would drop the first 528
+    // samples, a frame of lip data early; NAudio's ACM decoder and Media Foundation do not run in the native AOT build).
     static (float[] pcm, int rate) ReadMono(string path)
     {
-        using WaveStream stream = Path.GetExtension(path).Equals(".mp3", StringComparison.OrdinalIgnoreCase)
-            ? new Mp3FileReader(path)
-            : new AudioFileReader(path);
+        using WaveStream stream = Path.GetExtension(path).ToLowerInvariant() switch
+        {
+            ".mp3" => new Mp3FileReaderBase(path, format => new NLayerDecompressor(format)),
+            ".wav" => new WaveFileReader(path),
+            _ => throw new NotSupportedException("only .wav and .mp3 are read: " + path),
+        };
         var reader = stream.ToSampleProvider();
         int channels = reader.WaveFormat.Channels;
         var samples = new List<float>();

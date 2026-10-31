@@ -16,7 +16,19 @@ publish/fhout-gen.exe -o out.json voice1.wav voice2.mp3 <folder> ...
 wav and mp3 (any rate, mono or stereo; a folder gives its .wav and .mp3 files in name order) and writes the same JSON as
 `python/generate.py`; without `-o` the JSON goes to standard output. Its features are the Python ones step for step
 (scipy's `resample_poly`, numpy's Hann window and percentile): on the same PCM the two agree to the third decimal. An mp3
-is decoded through ACM, sample for sample as ffmpeg decodes it (Media Foundation would start 528 samples late).
+is decoded by NLayer (managed) behind NAudio's frame reader, as ffmpeg decodes it (Media Foundation would start 528
+samples late; NAudio's ACM decoder rounds differently and does not run under native AOT).
+
+Native AOT (needs the MSVC build tools; `vswhere.exe` must be on PATH):
+
+```bash
+PATH="/c/Program Files (x86)/Microsoft Visual Studio/Installer:$PATH" \
+  dotnet publish Generate -c Release -r win-x64 -p:PublishAot=true -o publish-aot
+```
+
+gives a 4.5 MB `fhout-gen.exe` that has to stay beside `onnxruntime.dll` and `onnxruntime_providers_shared.dll` (native
+DLLs cannot go inside a native AOT exe). Same output; 18 mp3 voices (95 s) in about 1.1 s against 1.6 s for the
+single-file build, mostly the start-up.
 
 `models/full128/model.onnx` comes from `python/export_onnx.py models/full128 models/full128/model.onnx`.
 
