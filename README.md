@@ -5,6 +5,23 @@ the demo reads from `fhout_<sheet>.json.unity3d`) from a voice alone, for voices
 
 ## Use
 
+### Windows executable (no Python)
+
+```bash
+dotnet publish Generate -c Release -r win-x64 -o publish
+publish/fhout-gen.exe -o out.json voice1.wav voice2.mp3 <folder> ...
+```
+
+`fhout-gen.exe` is one self-contained file (about 45 MB, the model embedded; `--model x.onnx` takes another). It reads
+wav and mp3 (any rate, mono or stereo; a folder gives its .wav and .mp3 files in name order) and writes the same JSON as
+`python/generate.py`; without `-o` the JSON goes to standard output. Its features are the Python ones step for step
+(scipy's `resample_poly`, numpy's Hann window and percentile): on the same PCM the two agree to the third decimal. An mp3
+is decoded through ACM, sample for sample as ffmpeg decodes it (Media Foundation would start 528 samples late).
+
+`models/full128/model.onnx` comes from `python/export_onnx.py models/full128 models/full128/model.onnx`.
+
+### Python
+
 ```bash
 python -m venv .venv
 .venv/Scripts/python -m pip install torch --index-url https://download.pytorch.org/whl/cu128
