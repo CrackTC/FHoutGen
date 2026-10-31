@@ -35,10 +35,8 @@ single-file build, mostly the start-up.
 ### Python
 
 ```bash
-python -m venv .venv
-.venv/Scripts/python -m pip install torch --index-url https://download.pytorch.org/whl/cu128
-.venv/Scripts/python -m pip install numpy scipy
-.venv/Scripts/python -I python/generate.py models/full128/model.pt out.json voice1.wav voice2.wav   # or a folder of wavs
+uv sync                      # torch (CUDA 12.8), numpy, scipy; --group export / --group separate for the extras
+uv run python -I python/generate.py models/full128/model.pt out.json voice1.wav voice2.wav   # or a folder of wavs
 ```
 
 Each wav (any rate, mono or stereo) becomes one record, its file name as the TextId. The voice must be the voice alone:
@@ -61,5 +59,5 @@ sheets (22 h): MAE 0.033, open/closed agreement 99.3 %, correlation 0.93 (the lo
 ```bash
 dotnet build Extract -c Release
 bash build_full.sh
-.venv/Scripts/python -I python/train.py data/features_full runs/full128 --epochs 20
+uv run python -I python/train.py data/features_full runs/full128 --epochs 20
 ```
